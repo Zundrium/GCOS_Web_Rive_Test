@@ -1,0 +1,16 @@
+# Dependencies installed by npm.
+node_modules/
+
+# Generated app-server output: typed @gcos/io, build output, start bundle, etc.
+.gcos/
+
+# Build output.
+dist/
+apps/operator/dist/
+apps/interactive/dist/
+
+# macOS metadata.
+.DS_Store
+
+# TypeScript incremental cache; safe to regenerate.
+*.tsbuildinfo

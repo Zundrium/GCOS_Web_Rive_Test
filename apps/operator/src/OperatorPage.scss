@@ -1,0 +1,20 @@
+.operator {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  padding: 0 8px;
+
+  &__statusbar {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    justify-content: flex-start;
+  }
+
+  &__toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+  }
+}

@@ -1,0 +1,7 @@
+transport: ws
+
+'/SubscribeToggle':
+  retain: true
+  payload:
+    subscribed:
+      type: boolean

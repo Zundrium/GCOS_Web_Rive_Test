@@ -1,0 +1,7 @@
+project:
+  name: rive-test
+  version: 0.0.1
+  defaultApp: operator
+
+transports:
+  ws: true
