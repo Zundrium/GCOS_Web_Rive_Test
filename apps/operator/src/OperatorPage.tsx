@@ -9,7 +9,7 @@ import {
   TabletFrame,
   Toggle,
 } from '@gcos/web-ui-react';
-import { emit } from '@gcos/io';
+import { emit, on, type X2fRiveRenderStatsPayload } from '@gcos/io';
 import { connectGcos, type GcosConnectionState } from '../../shared/src/gcos-client';
 import { riveControlKey, riveProjects, type RiveControl, type RiveControlValue } from '../../shared/src/rive-projects';
 import './OperatorPage.scss';
@@ -18,6 +18,8 @@ export function OperatorPage() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [controlValues, setControlValues] = useState<Record<string, RiveControlValue>>({});
   const [connectionState, setConnectionState] = useState<GcosConnectionState>('connecting');
+  const [renderScalePercent, setRenderScalePercent] = useState(100);
+  const [renderStats, setRenderStats] = useState<X2fRiveRenderStatsPayload | null>(null);
 
   const selectedProject = useMemo(
     () => riveProjects.find((project) => project.id === selectedProjectId),
@@ -25,12 +27,16 @@ export function OperatorPage() {
   );
 
   useEffect(() => {
+    const unsubscribeRenderStats = on('/RiveRenderStats', setRenderStats);
     const connection = connectGcos({
       source: 'rive-project-operator',
       onStateChange: setConnectionState,
     });
 
-    return connection.stop;
+    return () => {
+      unsubscribeRenderStats();
+      connection.stop();
+    };
   }, []);
 
   useEffect(() => {
@@ -50,9 +56,23 @@ export function OperatorPage() {
     });
   }, [connectionState, selectedProject]);
 
+  useEffect(() => {
+    if (connectionState !== 'connected') return;
+
+    void emit('/RiveRenderQualityChanged', {
+      scalePercent: renderScalePercent,
+    });
+  }, [connectionState, renderScalePercent]);
+
   const selectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
     setControlValues({});
+  };
+
+  const selectRenderScale = (value: string) => {
+    const scalePercent = Number(value);
+    setRenderScalePercent(scalePercent);
+    void emit('/RiveRenderQualityChanged', { scalePercent });
   };
 
   const fireTrigger = (control: RiveControl) => {
@@ -90,6 +110,14 @@ export function OperatorPage() {
     });
   };
 
+  const renderResolution = renderStats
+    ? `${renderStats.renderWidth} × ${renderStats.renderHeight}`
+    : 'waiting for interactive';
+  const viewportResolution = renderStats
+    ? `${renderStats.viewportWidth} × ${renderStats.viewportHeight}`
+    : 'waiting for interactive';
+  const fps = typeof renderStats?.fps === 'number' ? renderStats.fps.toFixed(1) : 'waiting';
+
   return (
     <TabletFrame
       subtitle="Rive Projects"
@@ -121,6 +149,42 @@ export function OperatorPage() {
               <span>{selectedProject.controls.length} unique controls</span>
             </div>
           ) : null}
+        </Group>
+
+        <Group title="Interactive performance">
+          <div className="operator__field">
+            <Label>Render resolution</Label>
+            <Select
+              value={String(renderScalePercent)}
+              onChange={selectRenderScale}
+              options={[
+                { label: '100% native', value: '100' },
+                { label: '75% balanced', value: '75' },
+                { label: '67% recommended', value: '67' },
+                { label: '50% low GPU load', value: '50' },
+              ]}
+              autoPosition
+            />
+          </div>
+
+          <div className="operator__render-info">
+            <div>
+              <span>Actual render</span>
+              <strong>{renderResolution}</strong>
+            </div>
+            <div>
+              <span>Viewport</span>
+              <strong>{viewportResolution}</strong>
+            </div>
+            <div>
+              <span>Scale reported</span>
+              <strong>{renderStats ? `${renderStats.scalePercent}%` : 'waiting'}</strong>
+            </div>
+            <div>
+              <span>FPS</span>
+              <strong>{fps}</strong>
+            </div>
+          </div>
         </Group>
 
         {selectedProject ? (

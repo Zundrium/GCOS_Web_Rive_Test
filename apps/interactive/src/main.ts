@@ -1,5 +1,11 @@
 import { Rive } from '@rive-app/webgl2';
-import { on, type X2fRiveControlChangedPayload, type X2fRiveProjectSelectedPayload } from '@gcos/io';
+import {
+  emit,
+  on,
+  type X2fRiveControlChangedPayload,
+  type X2fRiveProjectSelectedPayload,
+  type X2fRiveRenderQualityChangedPayload,
+} from '@gcos/io';
 import { connectGcos } from '../../shared/src/gcos-client';
 import { findRiveProject, type RiveProject } from '../../shared/src/rive-projects';
 import './styles.css';
@@ -14,6 +20,13 @@ let activeProject: RiveProject | null = null;
 let rive: Rive | null = null;
 let riveLoaded = false;
 let pendingControls: RiveControlMessage[] = [];
+let renderScalePercent = 100;
+let latestFps: number | undefined;
+let lastStatsEmitAt = 0;
+
+const STATS_EMIT_INTERVAL_MS = 1000;
+const MIN_RENDER_SCALE_PERCENT = 25;
+const MAX_RENDER_SCALE_PERCENT = 100;
 
 statusEl.textContent = 'select a Rive project';
 
@@ -23,10 +36,11 @@ function requireElement<T extends Element>(selector: string): T {
   return element;
 }
 
-window.addEventListener('resize', () => rive?.resizeDrawingSurfaceToCanvas());
+window.addEventListener('resize', resizeRiveAndReportStats);
 
 const unsubscribeProjectSelected = on('/RiveProjectSelected', handleProjectSelected);
 const unsubscribeControlChanged = on('/RiveControlChanged', handleControlChanged);
+const unsubscribeRenderQualityChanged = on('/RiveRenderQualityChanged', handleRenderQualityChanged);
 const connection = connectGcos({
   source: INTERACTIVE_SOURCE,
   onStateChange: (state) => {
@@ -37,12 +51,52 @@ const connection = connectGcos({
 window.addEventListener('beforeunload', () => {
   unsubscribeProjectSelected();
   unsubscribeControlChanged();
+  unsubscribeRenderQualityChanged();
   connection.stop();
+  rive?.disableFPSCounter();
   rive?.cleanup();
 });
 
 function handleProjectSelected(payload: X2fRiveProjectSelectedPayload) {
   loadProject(payload.projectId);
+}
+
+function handleRenderQualityChanged(payload: X2fRiveRenderQualityChangedPayload) {
+  const nextScale = clampRenderScalePercent(payload.scalePercent);
+  if (nextScale === renderScalePercent) {
+    emitRenderStats(true);
+    return;
+  }
+
+  renderScalePercent = nextScale;
+  resizeRiveAndReportStats();
+}
+
+function clampRenderScalePercent(value: number): number {
+  if (!Number.isFinite(value)) return renderScalePercent;
+  return Math.min(MAX_RENDER_SCALE_PERCENT, Math.max(MIN_RENDER_SCALE_PERCENT, Math.round(value)));
+}
+
+function resizeRiveAndReportStats() {
+  const customDevicePixelRatio = window.devicePixelRatio * (renderScalePercent / 100);
+  rive?.resizeDrawingSurfaceToCanvas(customDevicePixelRatio);
+  emitRenderStats(true);
+}
+
+function emitRenderStats(force = false) {
+  const now = performance.now();
+  if (!force && now - lastStatsEmitAt < STATS_EMIT_INTERVAL_MS) return;
+  lastStatsEmitAt = now;
+
+  void emit('/RiveRenderStats', {
+    renderWidth: canvas.width,
+    renderHeight: canvas.height,
+    viewportWidth: Math.round(canvas.clientWidth),
+    viewportHeight: Math.round(canvas.clientHeight),
+    devicePixelRatio: window.devicePixelRatio,
+    scalePercent: renderScalePercent,
+    fps: latestFps,
+  });
 }
 
 function riveSrc(project: RiveProject): string {
@@ -61,12 +115,15 @@ function clearProject() {
   activeProject = null;
   riveLoaded = false;
   pendingControls = [];
+  rive?.disableFPSCounter();
   rive?.cleanup();
   rive = null;
+  latestFps = undefined;
   // Do not call canvas.getContext('2d') here: once a canvas has a 2D
   // context, WebGL2 renderer creation on the same canvas can fail.
   canvas.width = canvas.width;
   statusEl.textContent = 'select a Rive project';
+  emitRenderStats(true);
 }
 
 function loadProject(projectId: string) {
@@ -83,9 +140,11 @@ function loadProject(projectId: string) {
 
   if (nextProject.id === activeProject?.id && riveLoaded) return;
 
+  rive?.disableFPSCounter();
   rive?.cleanup();
   rive = null;
   riveLoaded = false;
+  latestFps = undefined;
   pendingControls = [];
   activeProject = nextProject;
   statusEl.textContent = `loading ${nextProject.label}...`;
@@ -98,10 +157,15 @@ function loadProject(projectId: string) {
     autoBind: true,
     shouldDisableRiveListeners: true,
     useOffscreenRenderer: true,
+    enablePerfMarks: true,
     onLoad: () => {
       if (activeProject?.id !== projectAtLoadStart.id) return;
       riveLoaded = true;
-      rive?.resizeDrawingSurfaceToCanvas();
+      rive?.enableFPSCounter((fps) => {
+        latestFps = fps;
+        emitRenderStats();
+      });
+      resizeRiveAndReportStats();
       statusEl.textContent = `loaded ${projectAtLoadStart.label}`;
       logRiveContents(projectAtLoadStart);
       fireBootTriggers(projectAtLoadStart);

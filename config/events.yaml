@@ -39,3 +39,28 @@ transport: ws
     valueBoolean:
       type: boolean
       optional: true
+
+'/RiveRenderQualityChanged':
+  retain: true
+  payload:
+    scalePercent:
+      type: number
+
+'/RiveRenderStats':
+  retain: true
+  payload:
+    renderWidth:
+      type: number
+    renderHeight:
+      type: number
+    viewportWidth:
+      type: number
+    viewportHeight:
+      type: number
+    devicePixelRatio:
+      type: number
+    scalePercent:
+      type: number
+    fps:
+      type: number
+      optional: true
