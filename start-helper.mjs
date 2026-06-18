@@ -19,11 +19,11 @@ export function parseArgs(argv) {
     barePortIndex !== -1 &&
     (barePortIndex + 1 >= forward.length || forward[barePortIndex + 1].startsWith('--'))
   ) {
-    throw new Error('Missing value for --port. Use --port 8100 or --port=8100.');
+    throw new Error('Missing value for --port. Use --port 8101 or --port=8101.');
   }
 
   const hasPort = forward.some((a) => a.startsWith('--port=')) || barePortIndex !== -1;
-  if (!hasPort) forward.push('--port', '8100');
+  if (!hasPort) forward.push('--port', '8101');
 
   return { skipInstall, skipBuild, forward };
 }

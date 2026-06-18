@@ -25,12 +25,12 @@ Both apps use the generated `@gcos/io` client. Do not hand-roll the framed WebSo
 node start.mjs
 ```
 
-This installs dependencies if needed, runs `gcos-build`, and starts the app-server on port 8100.
+This installs dependencies if needed, runs `gcos-build`, and starts the app-server on port 8101.
 
 Open:
 
-- operator: `http://localhost:8100/apps/operator/`
-- interactive: `http://localhost:8100/apps/interactive/`
+- operator: `http://localhost:8101/apps/operator/`
+- interactive: `http://localhost:8101/apps/interactive/`
 
 Skip install/build if already done:
 

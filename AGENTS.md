@@ -43,5 +43,5 @@ node start.mjs
 
 Open:
 
-- `http://localhost:8100/apps/operator/`
-- `http://localhost:8100/apps/interactive/`
+- `http://localhost:8101/apps/operator/`
+- `http://localhost:8101/apps/interactive/`
