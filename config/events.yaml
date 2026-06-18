@@ -7,6 +7,9 @@ transport: ws
       type: string
     projectLabel:
       type: string
+    renderer:
+      type: string
+      optional: true
 
 '/RiveControlChanged':
   retain: true
@@ -45,10 +48,21 @@ transport: ws
   payload:
     scalePercent:
       type: number
+    renderer:
+      type: string
+      optional: true
+
+'/RiveRendererChanged':
+  retain: true
+  payload:
+    renderer:
+      type: string
 
 '/RiveRenderStats':
   retain: true
   payload:
+    renderer:
+      type: string
     renderWidth:
       type: number
     renderHeight:

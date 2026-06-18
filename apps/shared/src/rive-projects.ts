@@ -1,6 +1,19 @@
 export type RiveControlType = 'trigger' | 'boolean' | 'number' | 'enumType';
 export type RiveControlSource = 'viewModel' | 'stateMachine';
 export type RiveControlValue = string | number | boolean;
+export type RiveRenderer = 'webgl2' | 'webgl1' | 'canvas';
+
+export const riveRenderers: Array<{ label: string; value: RiveRenderer; description: string }> = [
+  { label: 'WebGL2', value: 'webgl2', description: 'GPU/WebGL2 renderer' },
+  { label: 'WebGL1', value: 'webgl1', description: 'GPU/WebGL1 renderer' },
+  { label: 'Canvas', value: 'canvas', description: '2D Canvas renderer' },
+];
+
+export const RIVE_RENDERER_STORAGE_KEY = 'gcos-rive-test:renderer-command';
+
+export function isRiveRenderer(value: string): value is RiveRenderer {
+  return riveRenderers.some((renderer) => renderer.value === value);
+}
 
 export type RiveControl = {
   name: string;

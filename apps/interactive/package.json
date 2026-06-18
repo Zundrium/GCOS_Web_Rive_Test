@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@rive-app/canvas": "^2.38.1",
+    "@rive-app/webgl": "^2.37.0",
     "@rive-app/webgl2": "^2.38.1"
   },
   "devDependencies": {

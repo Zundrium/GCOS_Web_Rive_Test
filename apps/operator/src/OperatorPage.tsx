@@ -11,7 +11,15 @@ import {
 } from '@gcos/web-ui-react';
 import { emit, on, type X2fRiveRenderStatsPayload } from '@gcos/io';
 import { connectGcos, type GcosConnectionState } from '../../shared/src/gcos-client';
-import { riveControlKey, riveProjects, type RiveControl, type RiveControlValue } from '../../shared/src/rive-projects';
+import {
+  RIVE_RENDERER_STORAGE_KEY,
+  riveControlKey,
+  riveProjects,
+  riveRenderers,
+  type RiveControl,
+  type RiveControlValue,
+  type RiveRenderer,
+} from '../../shared/src/rive-projects';
 import './OperatorPage.scss';
 
 export function OperatorPage() {
@@ -19,6 +27,7 @@ export function OperatorPage() {
   const [controlValues, setControlValues] = useState<Record<string, RiveControlValue>>({});
   const [connectionState, setConnectionState] = useState<GcosConnectionState>('connecting');
   const [renderScalePercent, setRenderScalePercent] = useState(100);
+  const [renderer, setRenderer] = useState<RiveRenderer>('webgl2');
   const [renderStats, setRenderStats] = useState<X2fRiveRenderStatsPayload | null>(null);
 
   const selectedProject = useMemo(
@@ -46,6 +55,7 @@ export function OperatorPage() {
       void emit('/RiveProjectSelected', {
         projectId: '',
         projectLabel: '',
+        renderer,
       });
       return;
     }
@@ -53,16 +63,18 @@ export function OperatorPage() {
     void emit('/RiveProjectSelected', {
       projectId: selectedProject.id,
       projectLabel: selectedProject.label,
+      renderer,
     });
-  }, [connectionState, selectedProject]);
+  }, [connectionState, selectedProject, renderer]);
 
   useEffect(() => {
     if (connectionState !== 'connected') return;
 
     void emit('/RiveRenderQualityChanged', {
       scalePercent: renderScalePercent,
+      renderer,
     });
-  }, [connectionState, renderScalePercent]);
+  }, [connectionState, renderScalePercent, renderer]);
 
   const selectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
@@ -70,9 +82,21 @@ export function OperatorPage() {
   };
 
   const selectRenderScale = (value: string) => {
-    const scalePercent = Number(value);
-    setRenderScalePercent(scalePercent);
-    void emit('/RiveRenderQualityChanged', { scalePercent });
+    setRenderScalePercent(Number(value));
+  };
+
+  const selectRenderer = (value: string) => {
+    const nextRenderer: RiveRenderer = value === 'canvas' || value === 'webgl1' ? value : 'webgl2';
+    setRenderer(nextRenderer);
+    setRenderStats(null);
+    publishRendererFallback(nextRenderer);
+  };
+
+  const publishRendererFallback = (nextRenderer: RiveRenderer) => {
+    window.localStorage.setItem(RIVE_RENDERER_STORAGE_KEY, JSON.stringify({
+      renderer: nextRenderer,
+      ts: Date.now(),
+    }));
   };
 
   const fireTrigger = (control: RiveControl) => {
@@ -153,6 +177,19 @@ export function OperatorPage() {
 
         <Group title="Interactive performance">
           <div className="operator__field">
+            <Label>Renderer</Label>
+            <Select
+              value={renderer}
+              onChange={selectRenderer}
+              options={riveRenderers.map((option) => ({
+                label: option.label,
+                value: option.value,
+              }))}
+              autoPosition
+            />
+          </div>
+
+          <div className="operator__field">
             <Label>Render resolution</Label>
             <Select
               value={String(renderScalePercent)}
@@ -168,6 +205,10 @@ export function OperatorPage() {
           </div>
 
           <div className="operator__render-info">
+            <div>
+              <span>Renderer</span>
+              <strong>{renderStats?.renderer ?? renderer}</strong>
+            </div>
             <div>
               <span>Actual render</span>
               <strong>{renderResolution}</strong>
