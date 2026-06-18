@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: [appRoot, resolve(appRoot, '../../.gcos')],
+      allow: [appRoot, resolve(appRoot, '../../.gcos'), resolve(appRoot, '../shared')],
     },
   },
 });

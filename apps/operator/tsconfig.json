@@ -8,7 +8,14 @@
     "strict": true,
     "noEmit": true,
     "isolatedModules": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@gcos/io": [".gcos/io/typescript/index.ts"],
+      "@gcos/io/types": [".gcos/io/typescript/types.ts"],
+      "@gcos/io/logging": [".gcos/io/typescript/logging/index.ts"],
+      "@gcos/io/logging/sentry-config": [".gcos/io/typescript/logging/sentry-config.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../shared/src", "../../.gcos/io/typescript"]
 }

@@ -14,7 +14,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@gcos/io": [".gcos/io/typescript/index.ts"],
+      "@gcos/io/types": [".gcos/io/typescript/types.ts"],
+      "@gcos/io/logging": [".gcos/io/typescript/logging/index.ts"],
+      "@gcos/io/logging/sentry-config": [".gcos/io/typescript/logging/sentry-config.ts"]
+    }
   },
-  "include": ["apps/operator/src", "apps/interactive/src"]
+  "include": ["apps/operator/src", "apps/interactive/src", "apps/shared/src", ".gcos/io/typescript"]
 }

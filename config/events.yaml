@@ -1,7 +1,41 @@
 transport: ws
 
-'/SubscribeToggle':
+'/RiveProjectSelected':
   retain: true
   payload:
-    subscribed:
+    projectId:
+      type: string
+    projectLabel:
+      type: string
+
+'/RiveControlChanged':
+  retain: true
+  payload:
+    projectId:
+      type: string
+    projectLabel:
+      type: string
+    controlName:
+      type: string
+    controlType:
+      type: string
+    source:
+      type: string
+    viewModel:
+      type: string
+      optional: true
+    artboard:
+      type: string
+      optional: true
+    stateMachine:
+      type: string
+      optional: true
+    valueString:
+      type: string
+      optional: true
+    valueNumber:
+      type: number
+      optional: true
+    valueBoolean:
       type: boolean
+      optional: true

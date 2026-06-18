@@ -1,23 +1,23 @@
 # GCOS Web Rive Test
 
-Prototype exploring [Rive](https://rive.app) as an interactive animation display within the GCOS app-server architecture.
-
-## The experiment
-
-**Interactive**: Loads a Rive `.riv` file (the [Glowing Subscribe Button](https://rive.app/marketplace/20749-39045-glowing-subscribe-button/)) on a canvas. Listens for GCOS events and fires Rive triggers in response.
-
-**Operator**: A single switch that emits `/SubscribeToggle` via the GCOS wire protocol.
+Template for a GCOS operator + interactive pair driving Rive WebGL2 animations through `@gcos/app-server`.
 
 ## Architecture
 
+```text
+Operator (React/Vite)                 Interactive (Vite + @rive-app/webgl2)
+  Select project + set controls         Load selected .riv + apply controls
+            │                                           │
+            └──────────── GCOS app-server /ws ──────────┘
+                         retained events
 ```
-Operator (React/Vite)          Interactive (Vite + Rive)
-  Subscribe switch               Canvas + Rive runtime
-       │                              │
-       └──── GCOS WS (app-server) ────┘
-              /SubscribeToggle
-              { subscribed: boolean }
-```
+
+Events are declared in `config/events.yaml` and generated into `@gcos/io` by `gcos-build`:
+
+- `/RiveProjectSelected` retains the selected project id/label.
+- `/RiveControlChanged` retains the last value per event channel and carries one Rive control update.
+
+Both apps use the generated `@gcos/io` client. Do not hand-roll the framed WebSocket protocol in app code.
 
 ## Quick start
 
@@ -25,7 +25,7 @@ Operator (React/Vite)          Interactive (Vite + Rive)
 node start.mjs
 ```
 
-This installs dependencies if needed, runs `gcos-build` for the two Vite apps, and starts the app-server on port 8100.
+This installs dependencies if needed, runs `gcos-build`, and starts the app-server on port 8100.
 
 Open:
 
@@ -38,25 +38,36 @@ Skip install/build if already done:
 node start.mjs --skip-install --skip-build
 ```
 
-## What happens
+## Source layout
 
-1. Toggle the switch in the operator
-2. Operator emits `/SubscribeToggle { subscribed: true }` via GCOS
-3. App-server retains the state and broadcasts to all connected clients
-4. Interactive receives the event and fires `Trigger 1` on the Rive state machine
-5. The subscribe button animation plays
+- `config/events.yaml` - GCOS wire events.
+- `apps/shared/src/rive-projects.ts` - single source of truth for Rive files, artboards, state machines, boot triggers, and exposed controls.
+- `apps/shared/src/gcos-client.ts` - shared GCOS connection helper; resolves `/ws` at the app-server origin and retries startup races.
+- `apps/operator/src/OperatorPage.tsx` - React operator UI; emits generated GCOS events.
+- `apps/interactive/src/main.ts` - Rive WebGL2 display; subscribes to generated GCOS events and applies controls.
+- `apps/interactive/public/*.riv` - Rive files served at `/apps/interactive/<file>.riv`.
 
-## Rive file details
+## WebGL2 notes
 
-- **Source**: https://rive.app/marketplace/20749-39045-glowing-subscribe-button/
-- **File URL**: `https://public.rive.app/community/runtime-files/20749-39045-glowing-subscribe-button.riv`
-- **Artboard**: `Artboard`
-- **State Machine**: `State Machine 1`
-- **Input**: `Trigger 1` (trigger type)
+The interactive app intentionally uses `@rive-app/webgl2`.
 
-## Adapting to a different .riv file
+- Do not call `canvas.getContext('2d')` on the Rive canvas before WebGL2 is created.
+- Clearing is done by resetting `canvas.width`.
+- `useOffscreenRenderer: true` is enabled for the Rive runtime.
+- In embedded hosts such as WebView2, GPU acceleration must not be disabled.
 
-1. Replace `RIVE_SRC` in `apps/interactive/src/main.ts`
-2. Update `ARTBOARD` and `STATE_MACHINE` constants
-3. Update the trigger/input name in `fireSubscribeTrigger()`
-4. Optionally add more events in `config/events.yaml` for additional inputs
+## Adding a Rive project
+
+1. Put the `.riv` file in `apps/interactive/public/`.
+2. Add one entry to `apps/shared/src/rive-projects.ts` with `fileName`, `artboard`, `stateMachines`, optional `bootTriggers`, optional nested view-model paths, and operator controls.
+3. If the wire shape changes, update `config/events.yaml` and rerun `npm run build`.
+4. Validate with `npm run typecheck` and `npm run build`.
+
+## Useful commands
+
+```bash
+npm run typecheck
+npm run build
+npm run inspect:rive -- apps/interactive/public/<file>.riv
+npm run inspect:rive:json -- apps/interactive/public/<file>.riv
+```

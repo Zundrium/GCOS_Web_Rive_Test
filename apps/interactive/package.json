@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rive-app/webgl2": "^2.38.0"
+    "@rive-app/webgl2": "^2.38.1"
   },
   "devDependencies": {
     "typescript": "^5.3.0",
